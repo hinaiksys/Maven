@@ -1,44 +1,43 @@
 pipeline {
-    agent any 
+    agent any
+
+    tools {
+        maven 'Maven 3.6.3' // Ensure this version is configured in Jenkins
+        jdk 'JDK 11' // Ensure this JDK version is configured in Jenkins
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm // Checkout the source code from the SCM
+                git url: 'https://github.com/hinaiksys/Maven.git'
             }
         }
+
         stage('Build') {
             steps {
-                // Change directory to where the pom.xml is located
-                dir('Javarepo1') {
-                    // Run Maven commands
-                    bat 'mvn clean package' // Use 'sh' if running on a Unix-based system
-                    // Optionally, display the Maven version
-                    bat 'mvn --version' // Use 'sh' if running on a Unix-based system
-                }
+                sh 'mvn clean package'
             }
         }
-       
+
         stage('Archive Artifacts') {
             steps {
-                // Archive the JAR file as an artifact
-                archiveArtifacts artifacts: 'Javarepo1/target/*.jar', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true // Adjust the pattern as needed
+            }
+        }
+
+        stage('Deliver') {
+            steps {
+                sh './deliver-script.sh' // Custom delivery script
             }
         }
     }
 
     post {
-        always {
-            // Archive test results, if any
-            junit '**/target/surefire-reports/*.xml' // Adjust this if your reports are in a different location
-            // Clean up workspace if necessary
-            cleanWs()
-        }
         success {
-            echo 'Pipeline succeeded!'
+            echo 'Build completed successfully!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo 'Build failed.'
         }
     }
 }
