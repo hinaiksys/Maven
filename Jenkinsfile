@@ -13,8 +13,7 @@ pipeline {
                         // Checkout the branch associated with the pull request
                         git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
                     } else {
-                        echo "This is not a pull request build. Checking out the main branch."
-                        git url: 'https://github.com/hinaiksys/Maven.git', branch: 'main'
+                        error("This pipeline only runs for pull requests.")
                     }
                 }
 
@@ -37,13 +36,13 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Determine the artifact name based on whether it's a PR
+                // Determine the artifact name based on the PR context
                 script {
-                    def prStatus = (env.CHANGE_ID) ? "Raised" : "Modified"
-                    def prId = env.CHANGE_ID ? env.CHANGE_ID : "noPR"
+                    def prStatus = env.CHANGE_ID ? "Raised" : "Modified"
+                    def prId = env.CHANGE_ID ?: "noPR"
                     def artifactName = "PR#${prId} ${prStatus} | ${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-                    
+
                     // Rename the jar with PR info and commit hash
                     sh "mv target/AWSCodeDeployDemo-0.0.1-SNAPSHOT.jar target/${artifactName}"
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
