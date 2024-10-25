@@ -6,6 +6,12 @@ pipeline {
             steps {
                 echo 'Starting Checkout stage...'
                 git branch: 'main', url: 'https://github.com/hinaiksys/Maven.git'
+
+                // Get the short commit hash
+                script {
+                    COMMIT_HASH = sh(script: "git rev-parse --short=6 HEAD", returnStdout: true).trim()
+                    echo "Commit Hash: ${COMMIT_HASH}"
+                }
             }
         }
 
@@ -19,7 +25,14 @@ pipeline {
         stage('Archive Artifacts') {
             steps {
                 echo 'Starting Archive Artifacts stage...'
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true // Adjust the pattern as needed
+
+                // Archive the artifact with the commit hash in the name
+                script {
+                    def artifactName = "maven-${COMMIT_HASH}.jar"
+                    echo "Archiving ${artifactName}"
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
+                    archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
+                }
             }
         }
     }
