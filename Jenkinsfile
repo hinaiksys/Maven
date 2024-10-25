@@ -40,9 +40,12 @@ pipeline {
                 // Determine the artifact name based on whether it's a PR
                 script {
                     def prStatus = (env.CHANGE_ID) ? "Raised" : "Modified"
-                    def artifactName = "PR#${env.CHANGE_ID} ${prStatus} | ${COMMIT_HASH}.jar"
+                    def prId = env.CHANGE_ID ? env.CHANGE_ID : "noPR"
+                    def artifactName = "PR#${prId} ${prStatus} | ${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-                    sh "mv target/*.jar target/${artifactName}" // Rename jar with PR info and commit hash
+                    
+                    // Rename the jar with PR info and commit hash
+                    sh "mv target/AWSCodeDeployDemo-0.0.1-SNAPSHOT.jar target/${artifactName}"
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
@@ -54,7 +57,21 @@ pipeline {
             echo 'Build completed successfully!'
         }
         failure {
-            echo 'Build failed.'
+            echo 'Build failed. Attempting to rollback to the last successful build...'
+            script {
+                // Get the last successful build number
+                def lastSuccessfulBuild = currentBuild.getPreviousSuccessfulBuild()
+                if (lastSuccessfulBuild) {
+                    echo "Rolling back to build #${lastSuccessfulBuild.number}..."
+                    
+                    // Assuming the artifact is in the same directory structure as the current build
+                    def artifactName = lastSuccessfulBuild.getArtifacts()[0].getFileName() // Get the artifact name of the last successful build
+                    sh "cp -f ${lastSuccessfulBuild.getArtifactsDir()}/${artifactName} target/${artifactName}" // Restore artifact
+                    echo "Rollback to last successful build completed."
+                } else {
+                    echo "No previous successful build found. Cannot perform rollback."
+                }
+            }
         }
     }
 }
