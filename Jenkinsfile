@@ -13,7 +13,8 @@ pipeline {
                         // Checkout the branch associated with the pull request
                         git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
                     } else {
-                        error("This pipeline only runs for pull requests.")
+                        echo "This is not a pull request build. Checking out the main branch."
+                        git url: 'https://github.com/hinaiksys/Maven.git', branch: 'main'
                     }
                 }
 
@@ -36,15 +37,11 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Determine the artifact name based on the PR context
+                // Archive the artifact with the commit hash in the name
                 script {
-                    def prStatus = env.CHANGE_ID ? "Raised" : "Modified"
-                    def prId = env.CHANGE_ID ?: "noPR"
-                    def artifactName = "PR#${prId} ${prStatus} | ${COMMIT_HASH}.jar"
+                    def artifactName = "maven-${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-
-                    // Rename the jar with PR info and commit hash
-                    sh "mv target/AWSCodeDeployDemo-0.0.1-SNAPSHOT.jar target/${artifactName}"
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
@@ -56,21 +53,7 @@ pipeline {
             echo 'Build completed successfully!'
         }
         failure {
-            echo 'Build failed. Attempting to rollback to the last successful build...'
-            script {
-                // Get the last successful build number
-                def lastSuccessfulBuild = currentBuild.getPreviousSuccessfulBuild()
-                if (lastSuccessfulBuild) {
-                    echo "Rolling back to build #${lastSuccessfulBuild.number}..."
-                    
-                    // Assuming the artifact is in the same directory structure as the current build
-                    def artifactName = lastSuccessfulBuild.getArtifacts()[0].getFileName() // Get the artifact name of the last successful build
-                    sh "cp -f ${lastSuccessfulBuild.getArtifactsDir()}/${artifactName} target/${artifactName}" // Restore artifact
-                    echo "Rollback to last successful build completed."
-                } else {
-                    echo "No previous successful build found. Cannot perform rollback."
-                }
-            }
+            echo 'Build failed.'
         }
     }
 }
