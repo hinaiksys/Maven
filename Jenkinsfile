@@ -5,7 +5,18 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Starting Checkout stage...'
-                git branch: 'main', url: 'https://github.com/hinaiksys/Maven.git'
+                
+                // Check if we're in a pull request build context
+                script {
+                    if (env.CHANGE_ID) {
+                        echo "This is a pull request build."
+                        // Checkout the branch associated with the pull request
+                        git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
+                    } else {
+                        echo "This is not a pull request build. Checking out the main branch."
+                        git url: 'https://github.com/hinaiksys/Maven.git', branch: 'main'
+                    }
+                }
 
                 // Get the short commit hash
                 script {
