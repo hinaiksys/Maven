@@ -1,11 +1,7 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven 3.6.3' // Ensure this version is configured in Jenkins
-        jdk 'JDK 11' // Ensure this JDK version is configured in Jenkins
-    }
-
+   
     stages {
         stage('Checkout') {
             steps {
@@ -25,11 +21,7 @@ pipeline {
             }
         }
 
-        stage('Deliver') {
-            steps {
-                sh './deliver-script.sh' // Custom delivery script
-            }
-        }
+      
     }
 
     post {
