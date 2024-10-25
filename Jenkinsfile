@@ -1,33 +1,49 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven 3.6.3' // Ensure this version is configured in Jenkins
-        jdk 'JDK 11' // Ensure this JDK version is configured in Jenkins
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/hinaiksys/Maven.git'
+                echo 'Starting Checkout stage...'
+                
+                // Check if we're in a pull request build context
+                script {
+                    if (env.CHANGE_ID) {
+                        echo "This is a pull request build."
+                        // Checkout the branch associated with the pull request
+                        git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
+                    } else {
+                        echo "This is not a pull request build. Checking out the main branch."
+                        git url: 'https://github.com/hinaiksys/Maven.git', branch: 'main'
+                    }
+                }
+
+                // Get the short commit hash
+                script {
+                    COMMIT_HASH = sh(script: "git rev-parse --short=6 HEAD", returnStdout: true).trim()
+                    echo "Commit Hash: ${COMMIT_HASH}"
+                }
             }
         }
 
         stage('Build') {
             steps {
+                echo 'Starting Build stage...'
                 sh 'mvn clean package'
             }
         }
 
         stage('Archive Artifacts') {
             steps {
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true // Adjust the pattern as needed
-            }
-        }
+                echo 'Starting Archive Artifacts stage...'
 
-        stage('Deliver') {
-            steps {
-                sh './deliver-script.sh' // Custom delivery script
+                // Archive the artifact with the commit hash in the name
+                script {
+                    def artifactName = "maven-${COMMIT_HASH}.jar"
+                    echo "Archiving ${artifactName}"
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
+                    archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
+                }
             }
         }
     }
