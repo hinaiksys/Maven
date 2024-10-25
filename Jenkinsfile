@@ -37,11 +37,12 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Archive the artifact with the commit hash in the name
+                // Determine the artifact name based on whether it's a PR
                 script {
-                    def artifactName = "maven-${COMMIT_HASH}.jar"
+                    def prStatus = (env.CHANGE_ID) ? "Raised" : "Modified"
+                    def artifactName = "PR#${env.CHANGE_ID} ${prStatus} | ${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with PR info and commit hash
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
