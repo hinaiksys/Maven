@@ -1,6 +1,6 @@
 pipeline {
     agent any
-//testing pushes in dev branch
+
     stages {
         stage('Checkout') {
             steps {
@@ -10,7 +10,7 @@ pipeline {
                 script {
                     if (env.CHANGE_ID) {
                         echo "This is a pull request build."
-                        echo "Pull Request Branch: ${env.CHANGE_BRANCH}" // Display the branch name for the pull request
+                        echo "Pull Request Branch: ${env.CHANGE_BRANCH}"
                         // Checkout the branch associated with the pull request
                         git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
                     } else {
@@ -38,11 +38,14 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Archive the artifact with the commit hash in the name
+                // Prepare artifact name
                 script {
-                    def artifactName = "maven-${COMMIT_HASH}.jar"
+                    def artifactAction = env.CHANGE_ID ? "Modified" : "Raised" // Determine action based on presence of CHANGE_ID
+                    def prId = env.CHANGE_ID ?: "N/A" // Use "N/A" if not in a pull request
+                    def artifactName = "PR#${prId} ${artifactAction} | ${COMMIT_HASH}.jar"
+
                     echo "Archiving ${artifactName}"
-                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with PR ID and commit hash
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
