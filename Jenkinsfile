@@ -1,6 +1,6 @@
 pipeline {
     agent any
-//testing pushes
+//testing pushes in dev branch
     stages {
         stage('Checkout') {
             steps {
