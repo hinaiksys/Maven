@@ -6,7 +6,7 @@ pipeline {
             steps {
                 echo 'Starting Checkout stage...'
                 
-                // Check if we're in a pull request build context 123
+                // Check if we're in a pull request build context
                 script {
                     if (env.CHANGE_ID) {
                         echo "This is a pull request build."
@@ -38,14 +38,11 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Prepare artifact name
+                // Archive the artifact with the commit hash in the name
                 script {
-                    def artifactAction = env.CHANGE_ID ? "Modified" : "Raised" // Determine action based on presence of CHANGE_ID
-                    def prId = env.CHANGE_ID ?: "N/A" // Use "N/A" if not in a pull request
-                    def artifactName = "PR#${prId} ${artifactAction} | ${COMMIT_HASH}.jar"
-
+                    def artifactName = "maven-${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-                    sh "mv target/*.jar target/${artifactName}" // Rename jar with PR ID and commit hash
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
