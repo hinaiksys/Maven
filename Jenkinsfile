@@ -37,15 +37,11 @@ pipeline {
             steps {
                 echo 'Starting Archive Artifacts stage...'
 
-                // Archive the artifact with the commit hash and pull request ID in the name
+                // Archive the artifact with the commit hash in the name
                 script {
-                    def prStatus = env.CHANGE_ID ? "Raised" : "Modified"
-                    def prId = env.CHANGE_ID ?: "noPR"
-                    def artifactName = "PR#${prId} ${prStatus} | ${COMMIT_HASH}.jar"
+                    def artifactName = "maven-${COMMIT_HASH}.jar"
                     echo "Archiving ${artifactName}"
-
-                    // Rename the jar with the artifact name
-                    sh "mv target/*.jar target/${artifactName}"
+                    sh "mv target/*.jar target/${artifactName}" // Rename jar with commit hash
                     archiveArtifacts artifacts: "target/${artifactName}", fingerprint: true
                 }
             }
@@ -56,26 +52,27 @@ pipeline {
         success {
             echo 'Build completed successfully!'
         }
-
         failure {
-            echo 'Build failed. Attempting to roll back to the last successful build...'
+            echo 'Build failed. Attempting rollback to last successful build artifacts...'
             script {
-                // Get the last successful build
-                def lastSuccessfulBuild = currentBuild.getPreviousSuccessfulBuild()
-                if (lastSuccessfulBuild) {
-                    echo "Rolling back to build #${lastSuccessfulBuild.number}..."
-                    
-                    // Assume the artifact from the last successful build is located in its artifacts directory
-                    def artifactPath = "${lastSuccessfulBuild.artifactsDir}/target"
-                    sh """
-                        mkdir -p target
-                        cp -f ${artifactPath}/*.jar target/
-                    """
-                    echo "Rollback to the last successful build's artifacts completed."
+                // Check for last successful build artifacts
+                def lastSuccessful = currentBuild.rawBuild.getPreviousSuccessfulBuild()
+                if (lastSuccessful != null) {
+                    echo "Rolling back to artifacts from Build #${lastSuccessful.number}"
+                    // Copy artifacts from the last successful build
+                    copyArtifacts projectName: "${env.JOB_NAME}", selector: specific("${lastSuccessful.number}")
+
+                    // Optionally, redeploy the last successful artifact if needed
+                    // e.g., custom deploy command can be placed here
+                    sh "./deploy.sh ${lastSuccessful.number}" // Replace with actual deploy script if applicable
                 } else {
-                    echo "No previous successful build found. Rollback is not possible."
+                    echo "No previous successful build to roll back to."
                 }
             }
+        }
+        always {
+            echo 'Cleaning up workspace...'
+            cleanWs()
         }
     }
 }
