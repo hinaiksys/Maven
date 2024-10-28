@@ -10,6 +10,7 @@ pipeline {
                 script {
                     if (env.CHANGE_ID) {
                         echo "This is a pull request build."
+                        echo "Pull Request Branch: ${env.CHANGE_BRANCH}" // Display the branch name for the pull request
                         // Checkout the branch associated with the pull request
                         git url: 'https://github.com/hinaiksys/Maven.git', branch: env.CHANGE_BRANCH
                     } else {
